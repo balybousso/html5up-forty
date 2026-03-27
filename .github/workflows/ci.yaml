@@ -1,3 +1,4 @@
+# Pipeline sur branche trivy
 name: CI-CD Docker Pipeline
 on:
   push:
@@ -10,7 +11,7 @@ env:
   DOCKER_REGISTRY: ${{ secrets.DOCKERHUB_USERNAME }}
 jobs:
   # ===============================
-  # JOB 1 - CI : BUILD + PUSH
+  # JOB 1 - CI : BUILD + PUSH + SCAN
   # ===============================
   ci:
     runs-on: ubuntu-latest
@@ -35,15 +36,8 @@ jobs:
       - name: Push Docker image
         run: |
           docker push $DOCKER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG
-  # ===============================
-  # JOB 2 - SCAN TRIVY
-  # ===============================
-  scan-trivy:
-    needs: ci
-    runs-on: ubuntu-latest
-    steps:
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.20.0
+        uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/ci-html:1.0.1
           format: table
@@ -52,10 +46,10 @@ jobs:
           vuln-type: os,library
           ignore-unfixed: true
   # ===============================
-  # JOB 3 - CD : DEPLOY
+  # JOB 2 - CD : DEPLOY
   # ===============================
   deploy:
-    needs: scan-trivy
+    needs: ci
     runs-on: ubuntu-latest
     steps:
       - name: Pull latest image
@@ -64,15 +58,4 @@ jobs:
       - name: Pull latest image
         run: |
           docker pull $DOCKER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG
-      - name: Stop existing container
-        run: |
-          docker stop ci-app || true
-      - name: Remove old container
-        run: |
-          docker rm ci-app || true
-      - name: Run new container
-        run: |
-          docker run -d \
-            -p 80:80 \
-            --name ci-app \
-            $DOCKER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG
+      - name: Stop existing contai
