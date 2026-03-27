@@ -1,18 +1,14 @@
-# Pipeline sur branche trivy
+# Pipeline sur branche main
 name: CI-CD Docker Pipeline
 on:
   push:
     branches:
       - main
-      - trivy
 env:
   IMAGE_NAME: ci-html
   IMAGE_TAG: 1.0.1
   DOCKER_REGISTRY: ${{ secrets.DOCKERHUB_USERNAME }}
 jobs:
-  # ===============================
-  # JOB 1 - CI : BUILD + PUSH
-  # ===============================
   ci:
     runs-on: ubuntu-latest
     steps:
@@ -28,13 +24,6 @@ jobs:
       - name: Push Docker image
         run: |
           docker push $DOCKER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG
-  # ===============================
-  # JOB 2 - SCAN TRIVY
-  # ===============================
-  scan-trivy:
-    needs: ci
-    runs-on: ubuntu-latest
-    steps:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
@@ -44,6 +33,22 @@ jobs:
           exit-code: 0
           vuln-type: os,library
           ignore-unfixed: true
-  # ===============================
-  # JOB 3 - CD : DEPLOY
-  # ===================
+  deploy:
+    needs: ci
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pull latest image
+        run: |
+          docker pull $DOCKER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG
+      - name: Stop existing container
+        run: |
+          docker stop ci-app || true
+      - name: Remove old container
+        run: |
+          docker rm ci-app || true
+      - name: Run new container
+        run: |
+          docker run -d \
+            -p 80:80 \
+            --name ci-app \
+            $DOCKER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG
