@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - trivy
 env:
   IMAGE_NAME: ci-html
   IMAGE_TAG: 1.0.1
