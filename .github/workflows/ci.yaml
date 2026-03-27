@@ -10,7 +10,7 @@ env:
   DOCKER_REGISTRY: ${{ secrets.DOCKERHUB_USERNAME }}
 jobs:
   # ===============================
-  # JOB 1 - CI : BUILD + PUSH
+  # JOB 1 - CI : BUILD + PUSH + SCAN
   # ===============================
   ci:
     runs-on: ubuntu-latest
@@ -35,13 +35,6 @@ jobs:
       - name: Push Docker image
         run: |
           docker push $DOCKER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG
-  # ===============================
-  # JOB 2 - SCAN TRIVY
-  # ===============================
-  scan-trivy:
-    needs: ci
-    runs-on: ubuntu-latest
-    steps:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
@@ -52,10 +45,10 @@ jobs:
           vuln-type: os,library
           ignore-unfixed: true
   # ===============================
-  # JOB 3 - CD : DEPLOY
+  # JOB 2 - CD : DEPLOY
   # ===============================
   deploy:
-    needs: scan-trivy
+    needs: ci
     runs-on: ubuntu-latest
     steps:
       - name: Pull latest image
